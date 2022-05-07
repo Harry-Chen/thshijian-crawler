@@ -2,6 +2,7 @@
 
 import os
 import json
+import io
 import csv
 from multiprocessing import Pool
 
@@ -88,7 +89,7 @@ if __name__ == '__main__':
     with open('result.json', 'w') as f:
         json.dump(projects, f, indent=4, ensure_ascii=False)
 
-    with open('result.csv', 'w') as f:
+    with io.open("result.csv", 'w', encoding='utf-8-sig') as f:
         fieldnames = projects[0].keys()
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
