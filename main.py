@@ -15,10 +15,23 @@ if os.path.isfile(COOKIE_FILE):
     with open(COOKIE_FILE) as f:
         for f in [c.strip() for c in f.read().split(';')]:
             k, v = f.split('=')
-            session.cookies[k] = v
+            session.cookies[k.strip()] = v.strip()
 else:
     print(f'Error: {COOKIE_FILE} not found')
     exit(1)
+
+
+def check_response(r: requests.Response, force=True):
+    assert (r.status_code == 200)
+    r_obj = json.loads(r.content)
+    if r_obj['result'] == 'success':
+        return r_obj['object']
+    else:
+        print(f'Request {r.url} failed: {r_obj}')
+        if force:
+            exit(1)
+        else:
+            return None
 
 
 def process_project(rp):
@@ -34,27 +47,24 @@ def process_project(rp):
         'province_name': rp['SSMC']
     }
 
-    r = session.post(
+    app_dep = check_response(session.post(
         f"http://thshijian.tsinghua.edu.cn/b/xs/xmsq/queryDepCount/{project_id}"
-    )
-    assert (r.status_code == 200)
-    app_dep_r = json.loads(r.content)['object']
-    assert (len(app_dep_r) == 1)
-    project['1st_applied_dep'] = app_dep_r[0]['DWJC']
+    ))
+    assert (len(app_dep) == 1)
+    project['1st_applied_dep'] = app_dep[0]['DWJC']
 
     applied_num = [0] * 4
-    applied_num[0] = app_dep_r[0]['COUNT']
+    applied_num[0] = app_dep[0]['COUNT']
 
     # applied_departments = {}
     # for r in app_dep_r:
     #     applied_departments[r['DWJC']] = r['COUNT']
     # project['applied_departments'] = applied_departments
 
-    r = session.post(
+    app_level = check_response(session.post(
         f"http://thshijian.tsinghua.edu.cn/b/xs/xmsq/queryApplyCounts/{project_id}"
-    )
-    assert (r.status_code == 200)
-    for r in json.loads(r.content)['object']:
+    ))
+    for r in app_level:
         applied_num[int(r['ZYXH']) - 1] = r['COUNT']
 
     for i, n in enumerate(applied_num):
@@ -65,11 +75,9 @@ def process_project(rp):
 
 if __name__ == '__main__':
 
-    r = session.post(
+    raw_projects = check_response(session.post(
         "http://thshijian.tsinghua.edu.cn/b/xs/xmsq/allData?pageNum=1&param=sq",
-        data="pageNum=1&xmmc=&jdmc=&ssm=&xqrs=&includeQxkx=true&dwssm=")
-    assert (r.status_code == 200)
-    raw_projects = json.loads(r.content)['object']
+        data="pageNum=1&xmmc=&jdmc=&ssm=&xqrs=&includeQxkx=true&dwssm="))
 
     print(f'Got {len(raw_projects)} projects in total')
 
