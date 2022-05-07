@@ -50,7 +50,7 @@ def process_project(rp):
     app_dep = check_response(session.post(
         f"http://thshijian.tsinghua.edu.cn/b/xs/xmsq/queryDepCount/{project_id}"
     ))
-    assert (len(app_dep) == 1)
+    assert (len(app_dep) == 1), f"More than one department groups allowed in project {rp}"
     project['1st_applied_dep'] = app_dep[0]['DWJC']
 
     applied_num = [0] * 4
