@@ -1,6 +1,6 @@
 # thshijian-crawler
 
-Crawl structured data from <https://thshijian.tsinghua.edu.cn>. Use at your own risk.
+Crawl structured data from <https://thshijian.tsinghua.edu.cn> (清华大学研究生社会实践系统). Use at your own risk.
 
 ## Usage
 
