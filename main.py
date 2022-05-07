@@ -5,30 +5,22 @@ import requests
 import json
 import csv
 from tqdm import tqdm
+from multiprocessing import Pool
+
 
 COOKIE_FILE = 'cookies.txt'
 session = requests.Session()
+if os.path.isfile(COOKIE_FILE):
+    with open(COOKIE_FILE) as f:
+        for f in [c.strip() for c in f.read().split(';')]:
+            k, v = f.split('=')
+            session.cookies[k] = v
+else:
+    print(f'Error: {COOKIE_FILE} not found')
+    exit(1)
 
-if __name__ == '__main__':
 
-    if os.path.isfile(COOKIE_FILE):
-        with open(COOKIE_FILE) as f:
-            for f in [c.strip() for c in f.read().split(';')]:
-                k, v = f.split('=')
-                session.cookies[k] = v
-    else:
-        print(f'Error: {COOKIE_FILE} not found')
-        exit(1)
-
-    r = session.post("http://thshijian.tsinghua.edu.cn/b/xs/xmsq/allData?pageNum=1&param=sq", data="pageNum=1&xmmc=&jdmc=&ssm=&xqrs=&includeQxkx=true&dwssm=")
-    assert(r.status_code == 200)
-    raw_projects = json.loads(r.content)['object']
-
-    print(f'Got {len(raw_projects)} projects in total')
-    projects = []
-
-    for rp in tqdm(raw_projects):
-
+def process_project(rp):
         project_id = rp['XMID']
 
         project = {
@@ -63,7 +55,18 @@ if __name__ == '__main__':
         for i, n in enumerate(applied_num):
             project[f'applied_{i+1}'] = n
 
-        projects.append(project)
+        return project
+
+
+if __name__ == '__main__':
+
+    r = session.post("http://thshijian.tsinghua.edu.cn/b/xs/xmsq/allData?pageNum=1&param=sq", data="pageNum=1&xmmc=&jdmc=&ssm=&xqrs=&includeQxkx=true&dwssm=")
+    assert(r.status_code == 200)
+    raw_projects = json.loads(r.content)['object']
+
+    print(f'Got {len(raw_projects)} projects in total')
+
+    projects = [p for p in tqdm(Pool(8).imap_unordered(process_project, raw_projects), total=len(raw_projects))]
 
     with open('result.json', 'w') as f:
         json.dump(projects, f, indent=4, ensure_ascii=False)
