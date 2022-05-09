@@ -5,6 +5,7 @@ import json
 import io
 import csv
 from multiprocessing import Pool
+import traceback
 
 import requests
 from tqdm import tqdm
@@ -66,13 +67,27 @@ def process_project(rp):
         f"http://thshijian.tsinghua.edu.cn/b/xs/xmsq/queryApplyCounts/{project_id}"
     ))
     for r in app_level:
-        applied_num[int(r['ZYXH']) - 1] = r['COUNT']
+        zyxh = r['ZYXH']
+        if zyxh is None:
+            seq = 0
+            print(f'Warning: wrong count for project {project}: {r}, fixing...')
+        else:
+            seq = int(zyxh) - 1
+        applied_num[seq] = r['COUNT']
 
     for i, n in enumerate(applied_num):
         project[f'applied_{i+1}'] = n
 
     return project
 
+
+def try_process_project(rp):
+    try:
+        return process_project(rp)
+    except Exception as e:
+        print(f'Error processing {rp}')
+        traceback.print_exc()
+        
 
 if __name__ == '__main__':
 
@@ -83,7 +98,7 @@ if __name__ == '__main__':
     print(f'Got {len(raw_projects)} projects in total')
 
     projects = list(
-        tqdm(Pool(8).imap_unordered(process_project, raw_projects),
+        tqdm(Pool(8).imap_unordered(try_process_project, raw_projects),
              total=len(raw_projects)))
 
     with open('result.json', 'w') as f:
